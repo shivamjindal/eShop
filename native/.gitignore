@@ -1,2 +1,6 @@
 /target
 **/*.rs.bk
+
+# The repo-wide .NET .gitignore excludes every bin/ directory, which would silently drop Cargo
+# binary sources under crates/*/src/bin/.
+!crates/*/src/bin/
