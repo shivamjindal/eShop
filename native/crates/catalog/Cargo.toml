@@ -6,4 +6,7 @@ license.workspace = true
 description = "Catalog.API Rust landing zone"
 repository.workspace = true
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]

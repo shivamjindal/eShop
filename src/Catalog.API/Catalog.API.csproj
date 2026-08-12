@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <UserSecretsId>d1b521ec-3411-4d39-98c6-8509466ed471</UserSecretsId>
   </PropertyGroup>
 
@@ -48,6 +49,26 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Catalog.FunctionalTests" />
+    <InternalsVisibleTo Include="Catalog.UnitTests" />
   </ItemGroup>
+
+  <!-- Rust catalog cdylib (stock island) — built and copied beside the host. -->
+  <PropertyGroup>
+    <NativeCatalogRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\native'))</NativeCatalogRoot>
+    <NativeCatalogLib Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(NativeCatalogRoot)\target\release\catalog.dll</NativeCatalogLib>
+    <NativeCatalogLib Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(NativeCatalogRoot)/target/release/libcatalog.dylib</NativeCatalogLib>
+    <NativeCatalogLib Condition="$([MSBuild]::IsOSPlatform('Linux'))">$(NativeCatalogRoot)/target/release/libcatalog.so</NativeCatalogLib>
+    <BuildCatalogNativeScript>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\scripts\build-catalog-native.sh'))</BuildCatalogNativeScript>
+  </PropertyGroup>
+
+  <Target Name="BuildCatalogNative" BeforeTargets="BeforeBuild" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Exec Command="bash &quot;$(BuildCatalogNativeScript)&quot;" Condition="'$(OS)' != 'Windows_NT'" />
+    <Exec Command="cargo build --release --manifest-path &quot;$(NativeCatalogRoot)\Cargo.toml&quot; -p catalog" Condition="'$(OS)' == 'Windows_NT'" />
+    <Copy SourceFiles="$(NativeCatalogLib)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(NativeCatalogLib)')" />
+  </Target>
+
+  <Target Name="CopyCatalogNativeOnPublish" AfterTargets="Publish" Condition="Exists('$(NativeCatalogLib)')">
+    <Copy SourceFiles="$(NativeCatalogLib)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

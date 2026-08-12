@@ -20,6 +20,14 @@ if ! command -v cargo >/dev/null 2>&1; then
   exit 2
 fi
 
+# Prefer Command Line Tools clang when Xcode license is not accepted (macOS).
+if [[ "$(uname -s)" == "Darwin" && -x /Library/Developer/CommandLineTools/usr/bin/clang ]]; then
+  export CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER="${CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER:-/Library/Developer/CommandLineTools/usr/bin/clang}"
+  if [[ -d /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk ]]; then
+    export SDKROOT="${SDKROOT:-/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk}"
+  fi
+fi
+
 echo "check-native: path=R:cargo-test-workspace"
 echo "check-native: running: cargo test --manifest-path $NATIVE_MANIFEST --workspace"
 set +e

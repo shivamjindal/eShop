@@ -29,6 +29,14 @@ run_and_report() {
   return "$ec"
 }
 
+# Prefer Command Line Tools clang when Xcode license is not accepted (macOS).
+if [[ "$(uname -s)" == "Darwin" && -x /Library/Developer/CommandLineTools/usr/bin/clang ]]; then
+  export CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER="${CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER:-/Library/Developer/CommandLineTools/usr/bin/clang}"
+  if [[ -d /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk ]]; then
+    export SDKROOT="${SDKROOT:-/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk}"
+  fi
+fi
+
 # --- Rust workspace (required by Migrate to Rust when present / when forced) ---
 if [[ -f "$NATIVE_MANIFEST" ]]; then
   if ! command -v cargo >/dev/null 2>&1; then
@@ -57,7 +65,7 @@ fi
 # --- .NET Catalog tests ---
 if [[ -f "$UNIT_PROJ" ]]; then
   set +e
-  run_and_report "A:Catalog.UnitTests" dotnet test "$UNIT_PROJ"
+  run_and_report "A:Catalog.UnitTests" dotnet test --project "$UNIT_PROJ"
   ec=$?
   set -e
   exit "$ec"
@@ -66,7 +74,7 @@ fi
 if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
   if [[ -f "$FUNC_PROJ" ]]; then
     set +e
-    run_and_report "B:Catalog.FunctionalTests" dotnet test "$FUNC_PROJ"
+    run_and_report "B:Catalog.FunctionalTests" dotnet test --project "$FUNC_PROJ"
     ec=$?
     set -e
     exit "$ec"
