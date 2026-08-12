@@ -28,7 +28,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="..\Basket.API\Proto\basket.proto" GrpcServices="Client" />
+    <!-- The Rust basket service owns the contract. -->
+    <Protobuf Include="..\..\native\basket_service\proto\basket.proto" ProtoRoot="..\..\native\basket_service\proto" GrpcServices="Client" />
   </ItemGroup>
 
 </Project>

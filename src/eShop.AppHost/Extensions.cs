@@ -17,6 +17,26 @@ internal enum OpenAITarget
 internal static class Extensions
 {
     /// <summary>
+    /// Adds a Cargo workspace as a service. The crate is built and run through <c>cargo run
+    /// --release</c> so the resource always reflects the current sources, and Aspire passes the
+    /// allocated port in <c>PORT</c>.
+    /// </summary>
+    public static IResourceBuilder<ExecutableResource> AddRustService(
+        this IDistributedApplicationBuilder builder,
+        string name,
+        string crateDirectoryRelativeToRepoRoot,
+        string binaryName)
+    {
+        var repoRoot = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", ".."));
+        var workingDirectory = Path.Combine(repoRoot, crateDirectoryRelativeToRepoRoot);
+
+        return builder
+            .AddExecutable(name, "cargo", workingDirectory, "run", "--release", "--quiet", "--bin", binaryName)
+            .WithHttpEndpoint(env: "PORT")
+            .WithOtlpExporter();
+    }
+
+    /// <summary>
     /// Adds a hook to set the ASPNETCORE_FORWARDEDHEADERS_ENABLED environment variable to true for all projects in the application.
     /// </summary>
     public static IDistributedApplicationBuilder AddForwardedHeaders(this IDistributedApplicationBuilder builder)
