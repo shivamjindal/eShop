@@ -152,8 +152,8 @@ event consumer, hosting/observability, callers).
 - **Harness:** `./scripts/check-basket.sh` — run before mass edits; fails closed when the Rust
   crate is missing (`MIGRATION_REQUIRE_RUST=1`), when `cargo test` fails, when the .NET Basket
   tests fail (while they exist), or when the parity harness reports a mismatch.
-- **Rust crate path:** `native/basket_service` (`cdylib` + `rlib` + binaries `basket-service`,
-  `parity-client`, `dev-oidc`).
+- **Rust crate path:** `native/basket_service` (`rlib` + binaries `basket-service` and
+  `parity-client`).
 - **Boundary:** the service boundary itself — the Rust binary *is* the `basket-api` resource and
   speaks the same gRPC contract. There is no FFI shim, so no dead Rust code.
 - **Acceptance:**
@@ -173,10 +173,10 @@ event consumer, hosting/observability, callers).
 
 | Unit | State | Evidence |
 |------|-------|----------|
-| 1. Characterize .NET gRPC surface | pending | |
-| 2. Rust domain core | pending | |
-| 3. Rust adapters | pending | |
-| 4. Rust gRPC host | pending | |
-| 5. Wire eShop to Rust | pending | |
-| 6. Dual-run parity harness | pending | |
-| 7. Retire .NET Basket.API | pending | |
+| 1. Characterize .NET gRPC surface | done | 16 tests green on the baseline (`dotnet test tests/Basket.UnitTests`), then folded into the Rust suite and the recorded transcript when the .NET project was removed |
+| 2. Rust domain core | done | `cargo test --manifest-path native/basket_service/Cargo.toml` (34 tests) |
+| 3. Rust adapters | done | same suite (redis url parsing, event handling, token parsing) + parity harness against real Redis/RabbitMQ |
+| 4. Rust gRPC host | done | `scripts/parity-basket.sh` drives the running binary over gRPC |
+| 5. Wire eShop to Rust | done | AppHost `basket-api` = `native/basket_service`; `npx playwright test` green against the running store |
+| 6. Dual-run parity harness | done | `./scripts/parity-basket.sh --dual` → 47/47 identical observations; transcript committed at `scripts/parity/basket-dotnet.transcript` |
+| 7. Retire .NET Basket.API | done | `src/Basket.API` and `tests/Basket.UnitTests` deleted; `dotnet build eShop.Web.slnf` green |

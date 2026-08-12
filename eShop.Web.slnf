@@ -2,7 +2,6 @@
   "solution": {
     "path": "eShop.slnx",
     "projects": [
-      "src\\Basket.API\\Basket.API.csproj",
       "src\\Catalog.API\\Catalog.API.csproj",
       "src\\EventBusRabbitMQ\\EventBusRabbitMQ.csproj",
       "src\\EventBus\\EventBus.csproj",
@@ -19,7 +18,6 @@
       "src\\Webhooks.API\\Webhooks.API.csproj",
       "src\\eShop.AppHost\\eShop.AppHost.csproj",
       "src\\eShop.ServiceDefaults\\eShop.ServiceDefaults.csproj",
-      "tests\\Basket.UnitTests\\Basket.UnitTests.csproj",
       "tests\\Catalog.FunctionalTests\\Catalog.FunctionalTests.csproj",
       "tests\\Ordering.FunctionalTests\\Ordering.FunctionalTests.csproj",
       "tests\\Ordering.UnitTests\\Ordering.UnitTests.csproj"

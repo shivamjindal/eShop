@@ -1,7 +1,6 @@
 ﻿<Solution>
   <Folder Name="/src/">
     <Project Path="src/eShop.AppHost/eShop.AppHost.csproj" />
-    <Project Path="src/Basket.API/Basket.API.csproj" />
     <Project Path="src/Catalog.API/Catalog.API.csproj" />
     <Project Path="src/eShop.ServiceDefaults/eShop.ServiceDefaults.csproj" />
     <Project Path="src/EventBus/EventBus.csproj" />
@@ -21,7 +20,6 @@
     <Project Path="src/ClientApp/ClientApp.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/Basket.UnitTests/Basket.UnitTests.csproj" />
     <Project Path="tests/Catalog.FunctionalTests/Catalog.FunctionalTests.csproj" />
     <Project Path="tests/Ordering.FunctionalTests/Ordering.FunctionalTests.csproj" />
     <Project Path="tests/Ordering.UnitTests/Ordering.UnitTests.csproj" />
