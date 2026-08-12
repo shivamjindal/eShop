@@ -25,6 +25,13 @@ else
   shopt -u nullglob
 fi
 
+if [[ -z "${rust_crate}" && "${MIGRATION_REQUIRE_RUST:-}" == "1" ]]; then
+  echo "path=rust-required-missing" >&2
+  echo "MIGRATION_REQUIRE_RUST=1 but no native/*/Cargo.toml found." >&2
+  echo "exit_code=2"
+  exit 2
+fi
+
 if [[ -n "${rust_crate}" ]]; then
   if ! command -v cargo >/dev/null 2>&1; then
     echo "path=rust-missing-toolchain crate=${rust_crate}" >&2
