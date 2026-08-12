@@ -2,9 +2,10 @@
 //! `src/eShop.ServiceDefaults/AuthenticationExtensions.cs`.
 //!
 //! Same rules as the .NET service: signing keys come from the Identity authority's OIDC discovery
-//! document, the issuer must match `Identity:Url`, the audience is **not** validated, and the raw
-//! `sub` claim is the basket owner. A token that fails validation makes the caller anonymous
-//! rather than failing the request, because the .NET gRPC endpoints declare no authorization
+//! document, the issuer must match `Identity:Url` (plus the Android emulator loopback used by
+//! `AddDefaultAuthentication` in DEBUG), the audience is **not** validated, and the raw `sub`
+//! claim is the basket owner. A token that fails validation makes the caller anonymous rather
+//! than failing the request, because the .NET gRPC endpoints declare no authorization
 //! requirement — each RPC applies its own identity gate.
 
 use std::time::{Duration, Instant};
@@ -18,6 +19,11 @@ use tokio::sync::RwLock;
 /// Matches the default `TokenValidationParameters.ClockSkew` of Microsoft's handler (5 minutes).
 const CLOCK_SKEW: u64 = 300;
 const MIN_REFRESH_INTERVAL: Duration = Duration::from_secs(30);
+
+/// Android emulator alias for the host loopback Identity endpoint. Included alongside
+/// `Identity:Url` to match `AddDefaultAuthentication`'s DEBUG `ValidIssuers`. Always allowed
+/// here because Aspire runs this service with `cargo run --release`.
+const ANDROID_EMULATOR_IDENTITY_ISSUER: &str = "https://10.0.2.2:5243";
 
 #[derive(Deserialize)]
 struct DiscoveryDocument {
@@ -130,7 +136,7 @@ impl Authority {
         let mut validation = Validation::new(algorithm);
         validation.validate_aud = false;
         validation.leeway = CLOCK_SKEW;
-        validation.set_issuer(&[&self.url]);
+        validation.set_issuer(&[&self.url, ANDROID_EMULATOR_IDENTITY_ISSUER]);
 
         let keys = self.keys.read().await;
         for key in keys
@@ -274,5 +280,10 @@ mod tests {
         let authenticator = JwtAuthenticator::new(Some("http://localhost:5223/".into())).unwrap();
 
         assert_eq!(authenticator.authority_url(), Some("http://localhost:5223"));
+    }
+
+    #[test]
+    fn android_emulator_issuer_matches_dotnet_debug_default() {
+        assert_eq!(ANDROID_EMULATOR_IDENTITY_ISSUER, "https://10.0.2.2:5243");
     }
 }

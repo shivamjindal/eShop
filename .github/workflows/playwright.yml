@@ -27,6 +27,8 @@ jobs:
     - uses: actions/setup-node@v4
       with:
         node-version: lts/*
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
     - name: Install dependencies
       run: npm ci
     - name: Install .NET HTTPS Development Certificate
