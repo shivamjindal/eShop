@@ -5,11 +5,11 @@ Service: `src/Basket.API` (gRPC basket service, .NET 10).
 
 ## Definition of done
 
-- [ ] Whole-service inventory (public surface, domain, adapters, events, deps) complete
-- [ ] Blast radius for migrating the service documented (local vs cross-cutting)
-- [ ] Recommended sequence covers the service with sequenced verifiable units
-- [ ] Each scheduled domain island includes required Rust implementation + .NET→Rust wire + parity
-- [ ] End state: `basket-api` in the Aspire app model is the Rust binary; no .NET Basket.API project remains
+- [x] Whole-service inventory (public surface, domain, adapters, events, deps) complete
+- [x] Blast radius for migrating the service documented (local vs cross-cutting)
+- [x] Recommended sequence covers the service with sequenced verifiable units
+- [x] Each scheduled domain island includes required Rust implementation + .NET→Rust wire + parity
+- [x] End state: `basket-api` in the Aspire app model is the Rust binary; no .NET Basket.API project remains
 - How to check pass/fail:
   - `./scripts/check-basket.sh` exits 0 (builds + tests the Rust basket crate; runs the .NET Basket
     characterization tests while the .NET project still exists)
@@ -128,6 +128,8 @@ serialization to be safe.**
   the live Rust service by `./scripts/parity-basket.sh`.
 
 ## Recommended sequence (covers the service)
+
+Status: units 1–8 are all landed. Evidence for each is in [`validate.md`](validate.md).
 
 1. **Characterize the .NET surface** — add MSTest coverage for `UpdateBasket`, `DeleteBasket`, the
    unauthenticated paths, the response projection, the Redis JSON byte contract, and the
