@@ -1,0 +1,12 @@
+[package]
+name = "catalog_stock"
+version = "0.1.0"
+edition = "2021"
+description = "Pure Catalog inventory/stock rules (RemoveStock / AddStock) for wasm / FFI"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+lto = true
+opt-level = "s"

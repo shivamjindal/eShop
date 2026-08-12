@@ -1,0 +1,6 @@
+ts	phase	decision	why	evidence	result
+2026-08-12T02:45:00Z	frame	Scoped to SHIV-19 stock vertical, not full Catalog.API rewrite	Epic out-of-scope is explicit; full rewrite is the wrong blast radius	SHIV-19	framed
+2026-08-12T02:46:00Z	design	Kept Wasmtime + packed i64 wasm ABI already sketched in-tree	One-way door already chosen by prior work; second arena would be waste	crates/catalog_stock/src/lib.rs, CatalogStock.Wasm.cs	kept
+2026-08-12T02:47:00Z	wire	CatalogItem delegates to CatalogStock; inline .NET rule bodies deleted	Migrate callers and delete legacy in one wave	src/Catalog.API/Model/CatalogItem.cs	wired
+2026-08-12T02:48:00Z	harness	Gate on wasm build + .NET characterization; Docker for cargo test	Xcode license blocks host native link on this machine	scripts/check-catalog.sh	harness set
+2026-08-12T02:50:00Z	verify	./scripts/check-catalog.sh green: wasm build, 7 rust tests in Docker, 7 .NET characterization tests	Prove live CatalogItem path through Rust wasm, not compile-only	tests/Catalog.UnitTests/bin/Debug/net10.0/catalog_stock.wasm	VERIFIED keep

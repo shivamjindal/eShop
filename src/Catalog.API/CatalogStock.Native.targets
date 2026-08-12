@@ -1,0 +1,32 @@
+<Project>
+  <PropertyGroup>
+    <CatalogStockCrateRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../crates/catalog_stock'))</CatalogStockCrateRoot>
+    <CatalogStockCargoManifest>$(CatalogStockCrateRoot)/Cargo.toml</CatalogStockCargoManifest>
+    <CatalogStockWasmProfile Condition="'$(Configuration)' == 'Debug'">debug</CatalogStockWasmProfile>
+    <CatalogStockWasmProfile Condition="'$(CatalogStockWasmProfile)' == ''">release</CatalogStockWasmProfile>
+    <CatalogStockCargoArgs Condition="'$(CatalogStockWasmProfile)' == 'release'">--release</CatalogStockCargoArgs>
+    <CatalogStockWasmOutDir>$(CatalogStockCrateRoot)/target/wasm32-unknown-unknown/$(CatalogStockWasmProfile)</CatalogStockWasmOutDir>
+    <CatalogStockWasmFileName>catalog_stock.wasm</CatalogStockWasmFileName>
+  </PropertyGroup>
+
+  <Target Name="BuildCatalogStockWasm" BeforeTargets="BeforeBuild"
+          Condition="Exists('$(CatalogStockCargoManifest)')">
+    <Exec Command="rustup target add wasm32-unknown-unknown"
+          IgnoreExitCode="true"
+          IgnoreStandardErrorWarningFormat="true" />
+    <Exec Command="cargo build --manifest-path &quot;$(CatalogStockCargoManifest)&quot; --target wasm32-unknown-unknown $(CatalogStockCargoArgs)"
+          WorkingDirectory="$(CatalogStockCrateRoot)"
+          IgnoreStandardErrorWarningFormat="true" />
+    <Copy SourceFiles="$(CatalogStockWasmOutDir)/$(CatalogStockWasmFileName)"
+          DestinationFolder="$(OutputPath)"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(CatalogStockWasmOutDir)/$(CatalogStockWasmFileName)')" />
+  </Target>
+
+  <Target Name="CopyCatalogStockWasmToOutput" AfterTargets="Build"
+          Condition="Exists('$(CatalogStockWasmOutDir)/$(CatalogStockWasmFileName)')">
+    <Copy SourceFiles="$(CatalogStockWasmOutDir)/$(CatalogStockWasmFileName)"
+          DestinationFolder="$(OutputPath)"
+          SkipUnchangedFiles="true" />
+  </Target>
+</Project>
