@@ -16,9 +16,10 @@ native/
 
 ## Convention
 
-One crate per service under `native/crates/<service>/`. Future migration units
-land as modules inside that crate (e.g. `catalog::stock`). Add crates for other
-services only when work on them starts.
+One crate per service under `native/crates/<service>/`. Migration units land as
+modules inside that crate. Catalog stock (`catalog::stock` + `ffi` cdylib) is the
+first wired island — Catalog.API loads `libcatalog` via `LibraryImport`. Add crates
+for other services only when work on them starts.
 
 ## Checks
 
