@@ -23,7 +23,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Setup .NET (global.json)
         uses: actions/setup-dotnet@v3
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
       - name: Build 
         run: dotnet build eShop.Web.slnf
       - name: Test
         run: dotnet test --solution eShop.Web.slnf --no-build --no-progress --output detailed
+      - name: Test Rust basket service
+        run: cargo test --manifest-path native/basket_service/Cargo.toml

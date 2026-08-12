@@ -27,8 +27,10 @@ var identityApi = builder.AddProject<Projects.Identity_API>("identity-api", laun
 
 var identityEndpoint = identityApi.GetEndpoint(launchProfileName);
 
-var basketApi = builder.AddProject<Projects.Basket_API>("basket-api")
-    .WithReference(redis)
+// Basket is a Rust service (native/basket_service); it serves the same gRPC contract on an
+// "http" endpoint, so consumers keep resolving it as "basket-api".
+var basketApi = builder.AddRustService("basket-api", "native/basket_service", "basket-service")
+    .WithReference(redis).WaitFor(redis)
     .WithReference(rabbitMq).WaitFor(rabbitMq)
     .WithEnvironment("Identity__Url", identityEndpoint);
 redis.WithParentRelationship(basketApi);
@@ -69,7 +71,7 @@ var webhooksClient = builder.AddProject<Projects.WebhookClient>("webhooksclient"
 var webApp = builder.AddProject<Projects.WebApp>("webapp", launchProfileName)
     .WithExternalHttpEndpoints()
     .WithUrls(c => c.Urls.ForEach(u => u.DisplayText = $"Online Store ({u.Endpoint?.EndpointName})"))
-    .WithReference(basketApi)
+    .WithReference(basketApi.GetEndpoint("http"))
     .WithReference(catalogApi)
     .WithReference(orderingApi)
     .WithReference(rabbitMq).WaitFor(rabbitMq)

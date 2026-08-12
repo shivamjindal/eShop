@@ -27,6 +27,8 @@ jobs:
     - uses: actions/setup-node@v4
       with:
         node-version: lts/*
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
     - name: Install dependencies
       run: npm ci
     - name: Install .NET HTTPS Development Certificate
@@ -36,6 +38,9 @@ jobs:
         dotnet dev-certs https --trust
     - name: Install Playwright Browsers
       run: npx playwright install chromium
+    # The AppHost starts basket-api with `cargo run --release`; prebuilding keeps startup fast.
+    - name: Build Rust basket service
+      run: cargo build --release --manifest-path native/basket_service/Cargo.toml
     - name: Run Playwright tests
       run: npx playwright test
       env:
