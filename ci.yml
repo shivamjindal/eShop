@@ -41,5 +41,10 @@ extends:
               - task: UseDotNet@2
                 inputs:
                   useGlobalJson: true
+              - powershell: |
+                  Invoke-WebRequest -Uri 'https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe' -OutFile rustup-init.exe
+                  .\rustup-init.exe -y --default-toolchain stable
+                  Write-Host "##vso[task.prependpath]$env:USERPROFILE\.cargo\bin"
+                displayName: Install Rust
               - script: dotnet build eShop.Web.slnf
                 displayName: Build Step
