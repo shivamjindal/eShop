@@ -28,7 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="..\Basket.API\Proto\basket.proto" GrpcServices="Client" />
+    <Protobuf Include="..\..\native\crates\basket\proto\basket.proto" GrpcServices="Client" />
   </ItemGroup>
 
 </Project>

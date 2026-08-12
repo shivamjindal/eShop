@@ -27,11 +27,15 @@ var identityApi = builder.AddProject<Projects.Identity_API>("identity-api", laun
 
 var identityEndpoint = identityApi.GetEndpoint(launchProfileName);
 
-var basketApi = builder.AddProject<Projects.Basket_API>("basket-api")
+// Migrated from .NET to Rust (native/crates/basket); the gRPC, Redis and event contracts are
+// unchanged, so callers below are unaffected.
+var basketApi = builder.AddRustService("basket-api", "basket-service")
     .WithReference(redis)
     .WithReference(rabbitMq).WaitFor(rabbitMq)
     .WithEnvironment("Identity__Url", identityEndpoint);
 redis.WithParentRelationship(basketApi);
+
+var basketEndpoint = basketApi.GetEndpoint("http");
 
 var catalogApi = builder.AddProject<Projects.Catalog_API>("catalog-api")
     .WithReference(rabbitMq).WaitFor(rabbitMq)
@@ -69,7 +73,7 @@ var webhooksClient = builder.AddProject<Projects.WebhookClient>("webhooksclient"
 var webApp = builder.AddProject<Projects.WebApp>("webapp", launchProfileName)
     .WithExternalHttpEndpoints()
     .WithUrls(c => c.Urls.ForEach(u => u.DisplayText = $"Online Store ({u.Endpoint?.EndpointName})"))
-    .WithReference(basketApi)
+    .WithReference(basketEndpoint)
     .WithReference(catalogApi)
     .WithReference(orderingApi)
     .WithReference(rabbitMq).WaitFor(rabbitMq)
@@ -94,7 +98,7 @@ webApp.WithEnvironment("CallBackUrl", webApp.GetEndpoint(launchProfileName));
 webhooksClient.WithEnvironment("CallBackUrl", webhooksClient.GetEndpoint(launchProfileName));
 
 // Identity has a reference to all of the apps for callback urls, this is a cyclic reference
-identityApi.WithEnvironment("BasketApiClient", basketApi.GetEndpoint("http"))
+identityApi.WithEnvironment("BasketApiClient", basketEndpoint)
            .WithEnvironment("OrderingApiClient", orderingApi.GetEndpoint("http"))
            .WithEnvironment("WebhooksApiClient", webHooksApi.GetEndpoint("http"))
            .WithEnvironment("WebhooksWebClient", webhooksClient.GetEndpoint(launchProfileName))
