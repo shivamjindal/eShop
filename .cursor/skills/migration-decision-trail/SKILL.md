@@ -15,7 +15,7 @@ Append-only audit trail for migration work (scope → implement → validate). E
 
 ## When to use
 
-- During **Scope .NET → Rust**, **implementation**, or **Migration validate**
+- During **Scope .NET → Rust**, **Migrate slice to Rust** (implement), or **Migration validate**
 - When a demo/PR needs to show *why* a keep/merge or do-not-merge was issued
 - When multiple agents touch the same slice and need a shared history
 
@@ -56,9 +56,9 @@ Do **not** rewrite history. Correct mistakes with a new row that supersedes the 
 
 2. **Append on the milestones**  
    Append **one row** at each of:
-   - Scope finishes (`phase=scope`) — e.g. first slice chosen, safety fact proven/unproven  
-   - Slice lands (`phase=implement`) — e.g. extract + characterization tests merged/ready  
-   - Validate verdict (`phase=validate`) — keep/merge, do not merge, or inconclusive, with evidence paths  
+   - Scope finishes (`phase=scope`) — e.g. first slice chosen as characterize → Rust → wire → parity; safety fact proven/unproven  
+   - Slice lands (`phase=implement`) — e.g. Rust island + .NET wire + parity / `./scripts/check-catalog.sh` green  
+   - Validate verdict (`phase=validate`) — keep/merge, do not merge, or inconclusive, with evidence paths (including Rust + parity for Catalog stock)
 
 3. **Keep rows honest**  
    Evidence must point at something a reviewer can open (command + exit code, file path, CI URL). No fabricated metrics.
@@ -70,9 +70,9 @@ Do **not** rewrite history. Correct mistakes with a new row that supersedes the 
 
 ```tsv
 ts	phase	decision	why	evidence	result
-2026-08-12T00:00:00Z	scope	First slice = CatalogItem pure rules	I/O-free domain; harness before change	plan.md#first-demo-able-slice	plan.md written; safety fact unproven
-2026-08-12T00:30:00Z	implement	Extract RemoveStock/AddStock + tests	Characterize before any Rust island	dotnet test tests/Catalog.UnitTests	tests green
-2026-08-12T01:00:00Z	validate	Keep/merge	Unit + Verify Catalog green; safety fact proven	validate.md; migrations/decisions.tsv	keep/merge
+2026-08-12T00:00:00Z	scope	First slice = Catalog stock → Rust island	E2E .NET→Rust not extract-only	plan.md#first-demo-able-slice	plan.md written; safety fact unproven
+2026-08-12T00:30:00Z	implement	Port stock rules to native/catalog_stock + wire	Parity cases green via Rust path	./scripts/check-catalog.sh; cargo test	tests green; Rust on path
+2026-08-12T01:00:00Z	validate	Keep/merge	Unit + Rust parity + Verify Catalog green; safety fact proven	validate.md; migrations/decisions.tsv	keep/merge
 ```
 
 ## Guardrails

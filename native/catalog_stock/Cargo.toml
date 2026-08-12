@@ -1,0 +1,11 @@
+[package]
+name = "catalog_stock"
+version = "0.1.0"
+edition = "2021"
+description = "Pure Catalog stock rules (RemoveStock / AddStock) — Rust island for .NET → Rust demo"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
