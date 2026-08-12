@@ -1,0 +1,15 @@
+{"case":"get_no_token","status":"Ok","items":[],"redis":{"/basket/alice-user-id":"absent"}}
+{"case":"get_bad_token","status":"Ok","items":[],"redis":{"/basket/alice-user-id":"absent"}}
+{"case":"get_wrong_issuer_token","status":"Ok","items":[],"redis":{"/basket/alice-user-id":"absent"}}
+{"case":"get_expired_token","status":"Ok","items":[],"redis":{"/basket/alice-user-id":"absent"}}
+{"case":"get_empty_basket","status":"Ok","items":[],"redis":{"/basket/alice-user-id":"absent"}}
+{"case":"update_no_token","status":"Unauthenticated","message":"The caller is not authenticated.","items":[],"redis":{"/basket/alice-user-id":"absent"}}
+{"case":"update_creates_basket","status":"Ok","items":["7:2","9:1"],"redis":{"/basket/alice-user-id":"{\"BuyerId\":\"alice-user-id\",\"Items\":[{\"Id\":null,\"ProductId\":7,\"ProductName\":null,\"UnitPrice\":0,\"OldUnitPrice\":0,\"Quantity\":2,\"PictureUrl\":null},{\"Id\":null,\"ProductId\":9,\"ProductName\":null,\"UnitPrice\":0,\"OldUnitPrice\":0,\"Quantity\":1,\"PictureUrl\":null}]}"}}
+{"case":"get_after_update","status":"Ok","items":["7:2","9:1"],"redis":{"/basket/alice-user-id":"{\"BuyerId\":\"alice-user-id\",\"Items\":[{\"Id\":null,\"ProductId\":7,\"ProductName\":null,\"UnitPrice\":0,\"OldUnitPrice\":0,\"Quantity\":2,\"PictureUrl\":null},{\"Id\":null,\"ProductId\":9,\"ProductName\":null,\"UnitPrice\":0,\"OldUnitPrice\":0,\"Quantity\":1,\"PictureUrl\":null}]}"}}
+{"case":"get_is_scoped_to_the_caller","status":"Ok","items":[],"redis":{"/basket/alice-user-id":"{\"BuyerId\":\"alice-user-id\",\"Items\":[{\"Id\":null,\"ProductId\":7,\"ProductName\":null,\"UnitPrice\":0,\"OldUnitPrice\":0,\"Quantity\":2,\"PictureUrl\":null},{\"Id\":null,\"ProductId\":9,\"ProductName\":null,\"UnitPrice\":0,\"OldUnitPrice\":0,\"Quantity\":1,\"PictureUrl\":null}]}","/basket/bob-user-id":"absent"}}
+{"case":"update_replaces_all_items","status":"Ok","items":["7:5"],"redis":{"/basket/alice-user-id":"{\"BuyerId\":\"alice-user-id\",\"Items\":[{\"Id\":null,\"ProductId\":7,\"ProductName\":null,\"UnitPrice\":0,\"OldUnitPrice\":0,\"Quantity\":5,\"PictureUrl\":null}]}"}}
+{"case":"update_with_no_items_empties_the_basket","status":"Ok","items":[],"redis":{"/basket/alice-user-id":"{\"BuyerId\":\"alice-user-id\",\"Items\":[]}"}}
+{"case":"delete_no_token","status":"Unauthenticated","message":"The caller is not authenticated.","items":[],"redis":{"/basket/alice-user-id":"{\"BuyerId\":\"alice-user-id\",\"Items\":[]}"}}
+{"case":"delete_removes_the_basket","status":"Ok","items":[],"redis":{"/basket/alice-user-id":"absent"}}
+{"case":"delete_is_idempotent","status":"Ok","items":[],"redis":{"/basket/alice-user-id":"absent"}}
+{"case":"order_started_clears_the_basket","status":"Ok","items":[],"redis":{"/basket/alice-user-id":"absent"}}
