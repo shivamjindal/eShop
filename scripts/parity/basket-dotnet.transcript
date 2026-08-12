@@ -1,0 +1,47 @@
+get/anonymous	response	OK items=[]
+get/anonymous	redis	<absent>
+get/authenticated-empty	response	OK items=[]
+get/authenticated-empty	redis	<absent>
+update/anonymous	response	ERR Unauthenticated: The caller is not authenticated.
+update/anonymous	redis	<absent>
+update/two-items	response	OK items=[(1,2),(5,9)]
+update/two-items	redis	{"BuyerId":"parity-user","Items":[{"Id":null,"ProductId":1,"ProductName":null,"UnitPrice":0,"OldUnitPrice":0,"Quantity":2,"PictureUrl":null},{"Id":null,"ProductId":5,"ProductName":null,"UnitPrice":0,"OldUnitPrice":0,"Quantity":9,"PictureUrl":null}]}
+get/after-update	response	OK items=[(1,2),(5,9)]
+get/after-update	redis	{"BuyerId":"parity-user","Items":[{"Id":null,"ProductId":1,"ProductName":null,"UnitPrice":0,"OldUnitPrice":0,"Quantity":2,"PictureUrl":null},{"Id":null,"ProductId":5,"ProductName":null,"UnitPrice":0,"OldUnitPrice":0,"Quantity":9,"PictureUrl":null}]}
+update/replaces-basket	response	OK items=[(3,1)]
+update/replaces-basket	redis	{"BuyerId":"parity-user","Items":[{"Id":null,"ProductId":3,"ProductName":null,"UnitPrice":0,"OldUnitPrice":0,"Quantity":1,"PictureUrl":null}]}
+get/after-replace	response	OK items=[(3,1)]
+get/after-replace	redis	{"BuyerId":"parity-user","Items":[{"Id":null,"ProductId":3,"ProductName":null,"UnitPrice":0,"OldUnitPrice":0,"Quantity":1,"PictureUrl":null}]}
+update/empty-item-list	response	OK items=[]
+update/empty-item-list	redis	{"BuyerId":"parity-user","Items":[]}
+get/after-empty-update	response	OK items=[]
+get/after-empty-update	redis	{"BuyerId":"parity-user","Items":[]}
+update/zero-quantity	response	OK items=[(4,0)]
+update/zero-quantity	redis	{"BuyerId":"parity-user","Items":[{"Id":null,"ProductId":4,"ProductName":null,"UnitPrice":0,"OldUnitPrice":0,"Quantity":0,"PictureUrl":null}]}
+update/negative-quantity	response	OK items=[(4,-1)]
+update/negative-quantity	redis	{"BuyerId":"parity-user","Items":[{"Id":null,"ProductId":4,"ProductName":null,"UnitPrice":0,"OldUnitPrice":0,"Quantity":-1,"PictureUrl":null}]}
+delete/anonymous	response	ERR Unauthenticated: The caller is not authenticated.
+delete/anonymous	redis	{"BuyerId":"parity-user","Items":[{"Id":null,"ProductId":4,"ProductName":null,"UnitPrice":0,"OldUnitPrice":0,"Quantity":-1,"PictureUrl":null}]}
+get/before-delete	response	OK items=[(4,-1)]
+get/before-delete	redis	{"BuyerId":"parity-user","Items":[{"Id":null,"ProductId":4,"ProductName":null,"UnitPrice":0,"OldUnitPrice":0,"Quantity":-1,"PictureUrl":null}]}
+delete/authenticated	response	OK
+delete/authenticated	redis	<absent>
+get/after-delete	response	OK items=[]
+get/after-delete	redis	<absent>
+delete/no-basket	response	OK
+delete/no-basket	redis	<absent>
+get/garbage-token	response	OK items=[]
+get/garbage-token	redis	<absent>
+update/garbage-token	response	ERR Unauthenticated: The caller is not authenticated.
+update/garbage-token	redis	<absent>
+get/expired-token	response	OK items=[]
+get/expired-token	redis	<absent>
+update/expired-token	response	ERR Unauthenticated: The caller is not authenticated.
+update/expired-token	redis	<absent>
+get/wrong-issuer-token	response	OK items=[]
+get/wrong-issuer-token	redis	<absent>
+update/wrong-issuer-token	response	ERR Unauthenticated: The caller is not authenticated.
+update/wrong-issuer-token	redis	<absent>
+event/order-started-clears-basket	redis-before	{"BuyerId":"parity-user","Items":[{"Id":null,"ProductId":2,"ProductName":null,"UnitPrice":0,"OldUnitPrice":0,"Quantity":4,"PictureUrl":null}]}
+event/order-started-clears-basket	redis-after	<absent>
+event/order-started-clears-basket	response	OK items=[]

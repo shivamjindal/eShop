@@ -21,7 +21,7 @@ anyhow = "1.0"
 async-trait = "0.1"
 base64 = "0.23"
 futures-lite = "2.6"
-jsonwebtoken = "11.0"
+jsonwebtoken = { version = "11.0", features = ["aws_lc_rs"] }
 lapin = "2.5"
 prost = "0.14"
 redis = { version = "1.5", features = ["tokio-comp", "connection-manager"] }

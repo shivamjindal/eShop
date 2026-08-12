@@ -1,17 +1,17 @@
-//! Dual-run parity harness: replays the characterized basket cases against the .NET service and
-//! the Rust service and fails when the observable behavior differs.
+//! Parity harness driver: replays the characterized basket cases against one running basket
+//! service and writes a deterministic transcript of what it observed.
 //!
-//! For every case it compares the gRPC outcome (status code, message, payload) *and* the bytes
-//! each implementation left in its own Redis database.
+//! `scripts/parity-basket.sh` records a transcript from the .NET service and then diffs the
+//! transcript produced by the Rust service against it, so the comparison survives the removal of
+//! the .NET project. Every case records both the gRPC outcome (status code, message, payload) and
+//! the bytes the service left in Redis.
 
 use std::collections::BTreeMap;
 use std::time::Duration;
 
 use anyhow::{bail, Context, Result};
 use basket_service::proto::basket_client::BasketClient;
-use basket_service::proto::{
-    BasketItem, DeleteBasketRequest, GetBasketRequest, UpdateBasketRequest,
-};
+use basket_service::proto::{BasketItem, DeleteBasketRequest, GetBasketRequest, UpdateBasketRequest};
 use lapin::options::{BasicPublishOptions, ExchangeDeclareOptions};
 use lapin::types::FieldTable;
 use lapin::{BasicProperties, Connection, ConnectionProperties, ExchangeKind};
@@ -23,15 +23,14 @@ const EXCHANGE_NAME: &str = "eshop_event_bus";
 const ORDER_STARTED: &str = "OrderStartedIntegrationEvent";
 
 struct Options {
-    dotnet_endpoint: String,
-    rust_endpoint: String,
-    dotnet_redis: String,
-    rust_redis: String,
+    endpoint: String,
+    redis_url: String,
     user: String,
     token: String,
     expired_token: Option<String>,
     foreign_token: Option<String>,
     amqp_url: Option<String>,
+    output: Option<String>,
 }
 
 impl Options {
@@ -55,38 +54,15 @@ impl Options {
         };
 
         Ok(Self {
-            dotnet_endpoint: required("dotnet")?,
-            rust_endpoint: required("rust")?,
-            dotnet_redis: required("dotnet-redis")?,
-            rust_redis: required("rust-redis")?,
+            endpoint: required("endpoint")?,
+            redis_url: required("redis")?,
             user: required("user")?,
             token: required("token")?,
             expired_token: args.get("expired-token").cloned(),
             foreign_token: args.get("foreign-token").cloned(),
             amqp_url: args.get("amqp").cloned(),
+            output: args.get("output").cloned(),
         })
-    }
-}
-
-#[derive(Debug, PartialEq, Eq)]
-struct Outcome(String);
-
-impl Outcome {
-    fn ok_items(items: &[BasketItem]) -> Self {
-        let items = items
-            .iter()
-            .map(|item| format!("({},{})", item.product_id, item.quantity))
-            .collect::<Vec<_>>()
-            .join(",");
-        Outcome(format!("OK items=[{items}]"))
-    }
-
-    fn ok_empty() -> Self {
-        Outcome("OK".to_owned())
-    }
-
-    fn from_status(status: &tonic::Status) -> Self {
-        Outcome(format!("ERR {:?}: {}", status.code(), status.message()))
     }
 }
 
@@ -102,10 +78,10 @@ struct Implementation {
 }
 
 impl Implementation {
-    async fn connect(name: &'static str, endpoint: &str, redis_url: &str) -> Result<Self> {
+    async fn connect(endpoint: &str, redis_url: &str) -> Result<Self> {
         let client = BasketClient::connect(endpoint.to_owned())
             .await
-            .with_context(|| format!("connecting to the {name} basket service at {endpoint}"))?;
+            .with_context(|| format!("connecting to the basket service at {endpoint}"))?;
         let redis = redis::Client::open(redis_url)
             .with_context(|| format!("opening {redis_url}"))?
             .get_multiplexed_async_connection()
@@ -115,15 +91,15 @@ impl Implementation {
         Ok(Self { client, redis })
     }
 
-    async fn call(&mut self, call: &Call, token: Option<&str>) -> Outcome {
+    async fn call(&mut self, call: &Call, token: Option<&str>) -> String {
         match call {
             Call::Get => match self
                 .client
                 .get_basket(authorize(Request::new(GetBasketRequest {}), token))
                 .await
             {
-                Ok(response) => Outcome::ok_items(&response.into_inner().items),
-                Err(status) => Outcome::from_status(&status),
+                Ok(response) => describe_items(&response.into_inner().items),
+                Err(status) => describe_status(&status),
             },
             Call::Update(items) => {
                 let request = UpdateBasketRequest {
@@ -140,8 +116,8 @@ impl Implementation {
                     .update_basket(authorize(Request::new(request), token))
                     .await
                 {
-                    Ok(response) => Outcome::ok_items(&response.into_inner().items),
-                    Err(status) => Outcome::from_status(&status),
+                    Ok(response) => describe_items(&response.into_inner().items),
+                    Err(status) => describe_status(&status),
                 }
             }
             Call::Delete => match self
@@ -149,8 +125,8 @@ impl Implementation {
                 .delete_basket(authorize(Request::new(DeleteBasketRequest {}), token))
                 .await
             {
-                Ok(_) => Outcome::ok_empty(),
-                Err(status) => Outcome::from_status(&status),
+                Ok(_) => "OK".to_owned(),
+                Err(status) => describe_status(&status),
             },
         }
     }
@@ -163,6 +139,14 @@ impl Implementation {
 
         Ok(value.unwrap_or_else(|| "<absent>".to_owned()))
     }
+
+    async fn clear(&mut self, user: &str) -> Result<()> {
+        let _: i64 = redis::cmd("DEL")
+            .arg(format!("/basket/{user}"))
+            .query_async(&mut self.redis)
+            .await?;
+        Ok(())
+    }
 }
 
 fn authorize<T>(mut request: Request<T>, token: Option<&str>) -> Request<T> {
@@ -173,22 +157,28 @@ fn authorize<T>(mut request: Request<T>, token: Option<&str>) -> Request<T> {
     request
 }
 
-struct Report {
-    failures: usize,
-    cases: usize,
+fn describe_items(items: &[BasketItem]) -> String {
+    let items = items
+        .iter()
+        .map(|item| format!("({},{})", item.product_id, item.quantity))
+        .collect::<Vec<_>>()
+        .join(",");
+    format!("OK items=[{items}]")
 }
 
-impl Report {
-    fn record(&mut self, case: &str, aspect: &str, dotnet: &str, rust: &str) {
-        self.cases += 1;
-        if dotnet == rust {
-            println!("  MATCH    {case} [{aspect}]: {dotnet}");
-        } else {
-            self.failures += 1;
-            println!("  MISMATCH {case} [{aspect}]");
-            println!("      .NET: {dotnet}");
-            println!("      Rust: {rust}");
-        }
+fn describe_status(status: &tonic::Status) -> String {
+    format!("ERR {:?}: {}", status.code(), status.message())
+}
+
+struct Transcript {
+    lines: Vec<String>,
+}
+
+impl Transcript {
+    fn record(&mut self, case: &str, aspect: &str, value: &str) {
+        let line = format!("{case}\t{aspect}\t{value}");
+        println!("{line}");
+        self.lines.push(line);
     }
 }
 
@@ -196,56 +186,36 @@ impl Report {
 async fn main() -> Result<()> {
     let options = Options::from_args()?;
 
-    let mut dotnet =
-        Implementation::connect("dotnet", &options.dotnet_endpoint, &options.dotnet_redis).await?;
-    let mut rust =
-        Implementation::connect("rust", &options.rust_endpoint, &options.rust_redis).await?;
-    let mut report = Report {
-        failures: 0,
-        cases: 0,
-    };
+    let mut implementation = Implementation::connect(&options.endpoint, &options.redis_url).await?;
+    implementation.clear(&options.user).await?;
 
-    println!(
-        "parity: comparing .NET ({}) with Rust ({})",
-        options.dotnet_endpoint, options.rust_endpoint
-    );
-
+    let mut transcript = Transcript { lines: Vec::new() };
     let token = Some(options.token.as_str());
+
     let mut cases: Vec<(&str, Call, Option<&str>)> = vec![
         ("get/anonymous", Call::Get, None),
         ("get/authenticated-empty", Call::Get, token),
         ("update/anonymous", Call::Update(vec![(1, 2)]), None),
-        (
-            "update/two-items",
-            Call::Update(vec![(1, 2), (5, 9)]),
-            token,
-        ),
+        ("update/two-items", Call::Update(vec![(1, 2), (5, 9)]), token),
         ("get/after-update", Call::Get, token),
         ("update/replaces-basket", Call::Update(vec![(3, 1)]), token),
         ("get/after-replace", Call::Get, token),
         ("update/empty-item-list", Call::Update(vec![]), token),
         ("get/after-empty-update", Call::Get, token),
         ("update/zero-quantity", Call::Update(vec![(4, 0)]), token),
+        ("update/negative-quantity", Call::Update(vec![(4, -1)]), token),
         ("delete/anonymous", Call::Delete, None),
         ("get/before-delete", Call::Get, token),
         ("delete/authenticated", Call::Delete, token),
         ("get/after-delete", Call::Get, token),
         ("delete/no-basket", Call::Delete, token),
         ("get/garbage-token", Call::Get, Some("not-a-jwt")),
-        (
-            "update/garbage-token",
-            Call::Update(vec![(1, 1)]),
-            Some("not-a-jwt"),
-        ),
+        ("update/garbage-token", Call::Update(vec![(1, 1)]), Some("not-a-jwt")),
     ];
 
     if let Some(expired) = options.expired_token.as_deref() {
         cases.push(("get/expired-token", Call::Get, Some(expired)));
-        cases.push((
-            "update/expired-token",
-            Call::Update(vec![(1, 1)]),
-            Some(expired),
-        ));
+        cases.push(("update/expired-token", Call::Update(vec![(1, 1)]), Some(expired)));
     }
     if let Some(foreign) = options.foreign_token.as_deref() {
         cases.push(("get/wrong-issuer-token", Call::Get, Some(foreign)));
@@ -257,40 +227,39 @@ async fn main() -> Result<()> {
     }
 
     for (name, call, token) in &cases {
-        let dotnet_outcome = dotnet.call(call, *token).await;
-        let rust_outcome = rust.call(call, *token).await;
-        report.record(name, "response", &dotnet_outcome.0, &rust_outcome.0);
+        let outcome = implementation.call(call, *token).await;
+        transcript.record(name, "response", &outcome);
 
-        let dotnet_stored = dotnet.stored_basket(&options.user).await?;
-        let rust_stored = rust.stored_basket(&options.user).await?;
-        report.record(name, "redis", &dotnet_stored, &rust_stored);
+        let stored = implementation.stored_basket(&options.user).await?;
+        transcript.record(name, "redis", &stored);
     }
 
     if let Some(amqp_url) = options.amqp_url.as_deref() {
         let case = "event/order-started-clears-basket";
-        dotnet.call(&Call::Update(vec![(2, 4)]), token).await;
-        rust.call(&Call::Update(vec![(2, 4)]), token).await;
+        implementation.call(&Call::Update(vec![(2, 4)]), token).await;
+        transcript.record(
+            case,
+            "redis-before",
+            &implementation.stored_basket(&options.user).await?,
+        );
 
         publish_order_started(amqp_url, &options.user)
             .await
             .context("publishing OrderStartedIntegrationEvent")?;
 
-        let dotnet_stored = wait_for_absent_basket(&mut dotnet, &options.user).await?;
-        let rust_stored = wait_for_absent_basket(&mut rust, &options.user).await?;
-        report.record(case, "redis", &dotnet_stored, &rust_stored);
-
-        let dotnet_outcome = dotnet.call(&Call::Get, token).await;
-        let rust_outcome = rust.call(&Call::Get, token).await;
-        report.record(case, "response", &dotnet_outcome.0, &rust_outcome.0);
+        let stored = wait_for_absent_basket(&mut implementation, &options.user).await?;
+        transcript.record(case, "redis-after", &stored);
+        transcript.record(
+            case,
+            "response",
+            &implementation.call(&Call::Get, token).await,
+        );
     }
 
-    println!(
-        "parity: {} comparisons, {} mismatches",
-        report.cases, report.failures
-    );
-
-    if report.failures > 0 {
-        std::process::exit(1);
+    if let Some(path) = options.output.as_deref() {
+        std::fs::write(path, format!("{}\n", transcript.lines.join("\n")))
+            .with_context(|| format!("writing {path}"))?;
+        eprintln!("parity: wrote {} observations to {path}", transcript.lines.len());
     }
 
     Ok(())
@@ -320,7 +289,7 @@ async fn publish_order_started(amqp_url: &str, user_id: &str) -> Result<()> {
         )
         .await?;
 
-    // Same payload Ordering.API puts on the wire (PascalCase, no envelope).
+    // The payload Ordering.API puts on the wire: PascalCase, no envelope.
     let body = serde_json::json!({
         "Id": "00000000-0000-0000-0000-0000000000ff",
         "CreationDate": "2026-08-12T03:34:00.1234567Z",
