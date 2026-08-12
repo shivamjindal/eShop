@@ -82,6 +82,20 @@
           Condition="'$(PublishDir)' != '' and '@(_CatalogNativeLibs)' != '' and Exists('$(PublishDir)')" />
   </Target>
 
+  <!-- Flow staged cdylib to ProjectReference outputs (WAF / test hosts). -->
+  <Target Name="IncludeCatalogNativeInCopyToOutputDirectoryItems"
+          BeforeTargets="GetCopyToOutputDirectoryItems"
+          Condition="'$(SkipCatalogNativeBuild)' != 'true'">
+    <ItemGroup>
+      <_CatalogNativeLibsForDeps Include="$(CatalogNativeStageDir)\*" />
+      <ContentWithTargetPath Include="@(_CatalogNativeLibsForDeps)" Condition="'@(_CatalogNativeLibsForDeps)' != ''">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <TargetPath>%(Filename)%(Extension)</TargetPath>
+      </ContentWithTargetPath>
+    </ItemGroup>
+  </Target>
+
 </Project>
 
 

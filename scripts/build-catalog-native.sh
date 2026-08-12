@@ -12,8 +12,10 @@ if [[ -d /Library/Developer/CommandLineTools ]] && ! xcodebuild -license check >
 fi
 
 if ! command -v cargo >/dev/null 2>&1; then
-  echo "build-catalog-native: cargo not on PATH" >&2
-  exit 2
+  # Keep `dotnet build` green on hosts/CI images without a Rust toolchain.
+  # Stock P/Invoke still needs the cdylib at runtime when that path is exercised.
+  echo "build-catalog-native: cargo not on PATH; skipping native build" >&2
+  exit 0
 fi
 
 cargo build --release --manifest-path "$MANIFEST" -p catalog
