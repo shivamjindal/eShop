@@ -8,6 +8,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+# Prefer Command Line Tools when the full Xcode license is not accepted (macOS linker).
+if [[ -d /Library/Developer/CommandLineTools ]] && ! xcodebuild -license check >/dev/null 2>&1; then
+  export DEVELOPER_DIR="${DEVELOPER_DIR:-/Library/Developer/CommandLineTools}"
+fi
+
 UNIT_PROJ="tests/Catalog.UnitTests/Catalog.UnitTests.csproj"
 FUNC_PROJ="tests/Catalog.FunctionalTests/Catalog.FunctionalTests.csproj"
 # Rust workspace under native/ (Catalog landing zone: native/crates/catalog).
@@ -55,9 +60,13 @@ else
 fi
 
 # --- .NET Catalog tests ---
+# SDK 10 expects `dotnet test --project <csproj>` (positional project path is rejected).
+# Skip OpenAPI doc regen on test builds — it is unrelated to stock parity and can stall CI agents.
+DOTNET_TEST_PROPS=(-p:OpenApiGenerateDocumentsOnBuild=false)
+
 if [[ -f "$UNIT_PROJ" ]]; then
   set +e
-  run_and_report "A:Catalog.UnitTests" dotnet test "$UNIT_PROJ"
+  run_and_report "A:Catalog.UnitTests" dotnet test --project "$UNIT_PROJ" "${DOTNET_TEST_PROPS[@]}"
   ec=$?
   set -e
   exit "$ec"
@@ -66,7 +75,7 @@ fi
 if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
   if [[ -f "$FUNC_PROJ" ]]; then
     set +e
-    run_and_report "B:Catalog.FunctionalTests" dotnet test "$FUNC_PROJ"
+    run_and_report "B:Catalog.FunctionalTests" dotnet test --project "$FUNC_PROJ" "${DOTNET_TEST_PROPS[@]}"
     ec=$?
     set -e
     exit "$ec"

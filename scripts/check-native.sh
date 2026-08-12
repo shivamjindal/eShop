@@ -6,6 +6,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+# Prefer Command Line Tools when the full Xcode license is not accepted (macOS linker).
+if [[ -d /Library/Developer/CommandLineTools ]] && ! xcodebuild -license check >/dev/null 2>&1; then
+  export DEVELOPER_DIR="${DEVELOPER_DIR:-/Library/Developer/CommandLineTools}"
+fi
+
 NATIVE_MANIFEST="native/Cargo.toml"
 
 if [[ ! -f "$NATIVE_MANIFEST" ]]; then
