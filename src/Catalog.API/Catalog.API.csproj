@@ -13,6 +13,8 @@
 
   <PropertyGroup>
     <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)</OpenApiDocumentsDirectory>
+    <!-- Committed OpenAPI JSON is authoritative; on-build getdocument hangs under some agent/toolchain setups. -->
+    <OpenApiGenerateDocumentsOnBuild>false</OpenApiGenerateDocumentsOnBuild>
   </PropertyGroup>
 
   <ItemGroup>
@@ -48,6 +50,52 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Catalog.FunctionalTests" />
+    <InternalsVisibleTo Include="Catalog.UnitTests" />
   </ItemGroup>
 
+  <!-- Rust catalog cdylib (stock rules) — built and copied next to the host. -->
+  <PropertyGroup>
+    <CatalogNativeStageDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\artifacts\native\catalog'))</CatalogNativeStageDir>
+  </PropertyGroup>
+
+  <Target Name="BuildCatalogNative" BeforeTargets="BeforeBuild" Condition="'$(SkipCatalogNativeBuild)' != 'true'">
+    <PropertyGroup>
+      <_CatalogNativeScript>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\scripts\build-catalog-native.sh'))</_CatalogNativeScript>
+    </PropertyGroup>
+    <MakeDir Directories="$(CatalogNativeStageDir)" />
+    <Exec Command="bash &quot;$(_CatalogNativeScript)&quot; &quot;$(CatalogNativeStageDir)&quot;"
+          WorkingDirectory="$(MSBuildThisFileDirectory)..\.."
+          Condition="Exists('$(_CatalogNativeScript)')" />
+  </Target>
+
+  <Target Name="CopyCatalogNativeToOutput" AfterTargets="BuildCatalogNative;CopyFilesToOutputDirectory" BeforeTargets="AfterBuild" Condition="'$(SkipCatalogNativeBuild)' != 'true'">
+    <ItemGroup>
+      <_CatalogNativeLibs Include="$(CatalogNativeStageDir)\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_CatalogNativeLibs)"
+          DestinationFolder="$(OutputPath)"
+          SkipUnchangedFiles="true"
+          Condition="'@(_CatalogNativeLibs)' != ''" />
+    <Copy SourceFiles="@(_CatalogNativeLibs)"
+          DestinationFolder="$(PublishDir)"
+          SkipUnchangedFiles="true"
+          Condition="'$(PublishDir)' != '' and '@(_CatalogNativeLibs)' != '' and Exists('$(PublishDir)')" />
+  </Target>
+
+  <!-- Flow staged cdylib to ProjectReference outputs (WAF / test hosts). -->
+  <Target Name="IncludeCatalogNativeInCopyToOutputDirectoryItems"
+          BeforeTargets="GetCopyToOutputDirectoryItems"
+          Condition="'$(SkipCatalogNativeBuild)' != 'true'">
+    <ItemGroup>
+      <_CatalogNativeLibsForDeps Include="$(CatalogNativeStageDir)\*" />
+      <ContentWithTargetPath Include="@(_CatalogNativeLibsForDeps)" Condition="'@(_CatalogNativeLibsForDeps)' != ''">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <TargetPath>%(Filename)%(Extension)</TargetPath>
+      </ContentWithTargetPath>
+    </ItemGroup>
+  </Target>
+
 </Project>
+
+
