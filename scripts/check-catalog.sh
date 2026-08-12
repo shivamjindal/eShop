@@ -13,6 +13,14 @@ RUST_CRATE_DIR="native/catalog_stock"
 # When set to 1, fail if the expected Rust crate is missing (skills require it).
 MIGRATION_REQUIRE_RUST="${MIGRATION_REQUIRE_RUST:-0}"
 
+# Prefer Command Line Tools when Xcode.app is selected but its license blocks `cc` linking.
+if [[ -z "${DEVELOPER_DIR:-}" && -d /Library/Developer/CommandLineTools ]]; then
+  if ! xcodebuild -checkFirstLaunchStatus >/dev/null 2>&1; then
+    export DEVELOPER_DIR=/Library/Developer/CommandLineTools
+    echo "check-catalog: using DEVELOPER_DIR=$DEVELOPER_DIR (Xcode license / first-launch not ready)"
+  fi
+fi
+
 run_and_report() {
   local path_label="$1"
   shift
@@ -54,7 +62,7 @@ fi
 # --- .NET Catalog tests ---
 if [[ -f "$UNIT_PROJ" ]]; then
   set +e
-  run_and_report "A:Catalog.UnitTests" dotnet test "$UNIT_PROJ"
+  run_and_report "A:Catalog.UnitTests" dotnet test --project "$UNIT_PROJ"
   ec=$?
   set -e
   exit "$ec"
@@ -63,7 +71,7 @@ fi
 if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
   if [[ -f "$FUNC_PROJ" ]]; then
     set +e
-    run_and_report "B:Catalog.FunctionalTests" dotnet test "$FUNC_PROJ"
+    run_and_report "B:Catalog.FunctionalTests" dotnet test --project "$FUNC_PROJ"
     ec=$?
     set -e
     exit "$ec"

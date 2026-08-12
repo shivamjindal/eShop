@@ -1,0 +1,56 @@
+<Project>
+  <!-- Build + copy native/catalog_stock cdylib next to the managed output for LibraryImport. -->
+  <PropertyGroup>
+    <_CatalogStockCrateDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../native/catalog_stock'))</_CatalogStockCrateDir>
+    <_CatalogStockCargoToml>$([System.IO.Path]::Combine('$(_CatalogStockCrateDir)', 'Cargo.toml'))</_CatalogStockCargoToml>
+    <_CatalogStockTargetDir>$([System.IO.Path]::Combine('$(_CatalogStockCrateDir)', 'target', 'release'))</_CatalogStockTargetDir>
+  </PropertyGroup>
+
+  <Target Name="BuildCatalogStockNative"
+          BeforeTargets="Build;CoreCompile"
+          Condition="Exists('$(_CatalogStockCargoToml)')">
+    <PropertyGroup>
+      <!-- Prefer Command Line Tools when Xcode license blocks linking (common on macOS agents). -->
+      <_CatalogStockDeveloperDir Condition="'$(_CatalogStockDeveloperDir)' == '' and Exists('/Library/Developer/CommandLineTools') and $([MSBuild]::IsOSUnixLike())">/Library/Developer/CommandLineTools</_CatalogStockDeveloperDir>
+    </PropertyGroup>
+
+    <Exec Command="cargo build --release --manifest-path &quot;$(_CatalogStockCargoToml)&quot;"
+          EnvironmentVariables="DEVELOPER_DIR=$(_CatalogStockDeveloperDir)"
+          Condition="'$(_CatalogStockDeveloperDir)' != ''" />
+    <Exec Command="cargo build --release --manifest-path &quot;$(_CatalogStockCargoToml)&quot;"
+          Condition="'$(_CatalogStockDeveloperDir)' == ''" />
+
+    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+      <_CatalogStockNativeLib Include="$(_CatalogStockTargetDir)\catalog_stock.dll" />
+    </ItemGroup>
+    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+      <_CatalogStockNativeLib Include="$(_CatalogStockTargetDir)\libcatalog_stock.dylib" />
+    </ItemGroup>
+    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+      <_CatalogStockNativeLib Include="$(_CatalogStockTargetDir)\libcatalog_stock.so" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(_CatalogStockNativeLib)"
+          DestinationFolder="$(TargetDir)"
+          SkipUnchangedFiles="true"
+          Condition="'@(_CatalogStockNativeLib)' != ''" />
+  </Target>
+
+  <Target Name="CopyCatalogStockNativeOnPublish"
+          AfterTargets="Publish"
+          Condition="Exists('$(_CatalogStockCargoToml)')">
+    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+      <_CatalogStockNativeLibPub Include="$(_CatalogStockTargetDir)\catalog_stock.dll" />
+    </ItemGroup>
+    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+      <_CatalogStockNativeLibPub Include="$(_CatalogStockTargetDir)\libcatalog_stock.dylib" />
+    </ItemGroup>
+    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+      <_CatalogStockNativeLibPub Include="$(_CatalogStockTargetDir)\libcatalog_stock.so" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_CatalogStockNativeLibPub)"
+          DestinationFolder="$(PublishDir)"
+          SkipUnchangedFiles="true"
+          Condition="'@(_CatalogStockNativeLibPub)' != ''" />
+  </Target>
+</Project>

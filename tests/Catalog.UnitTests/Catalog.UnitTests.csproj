@@ -1,0 +1,18 @@
+<Project Sdk="MSTest.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <GenerateErrorForMissingTargetingPacks>false</GenerateErrorForMissingTargetingPacks>
+    <IsPublishable>false</IsPublishable>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Catalog.API\Catalog.API.csproj" />
+  </ItemGroup>
+
+  <!-- Ensure libcatalog_stock.* is next to the test host for LibraryImport. -->
+  <Import Project="..\..\src\Catalog.API\CatalogStock.Native.targets" />
+
+</Project>

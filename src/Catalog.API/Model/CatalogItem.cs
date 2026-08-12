@@ -61,20 +61,24 @@ public class CatalogItem
     /// 
     public int RemoveStock(int quantityDesired)
     {
-        if (AvailableStock == 0)
+        var available = AvailableStock;
+        var rc = CatalogStockNative.catalog_stock_remove(ref available, quantityDesired, out var removed);
+        if (rc == CatalogStockNative.ErrEmptyStock)
         {
             throw new CatalogDomainException($"Empty stock, product item {Name} is sold out");
         }
 
-        if (quantityDesired <= 0)
+        if (rc == CatalogStockNative.ErrNonPositiveQty)
         {
             throw new CatalogDomainException($"Item units desired should be greater than zero");
         }
 
-        int removed = Math.Min(quantityDesired, this.AvailableStock);
+        if (rc != CatalogStockNative.Ok)
+        {
+            throw new CatalogDomainException($"Stock remove failed with code {rc}");
+        }
 
-        this.AvailableStock -= removed;
-
+        AvailableStock = available;
         return removed;
     }
 
@@ -85,22 +89,22 @@ public class CatalogItem
     /// </summary>
     public int AddStock(int quantity)
     {
-        int original = this.AvailableStock;
+        var available = AvailableStock;
+        byte onReorder = OnReorder ? (byte)1 : (byte)0;
+        var rc = CatalogStockNative.catalog_stock_add(
+            ref available,
+            MaxStockThreshold,
+            ref onReorder,
+            quantity,
+            out var added);
 
-        // The quantity that the client is trying to add to stock is greater than what can be physically accommodated in the Warehouse
-        if ((this.AvailableStock + quantity) > this.MaxStockThreshold)
+        if (rc != CatalogStockNative.Ok)
         {
-            // For now, this method only adds new units up maximum stock threshold. In an expanded version of this application, we
-            //could include tracking for the remaining units and store information about overstock elsewhere. 
-            this.AvailableStock += (this.MaxStockThreshold - this.AvailableStock);
-        }
-        else
-        {
-            this.AvailableStock += quantity;
+            throw new CatalogDomainException($"Stock add failed with code {rc}");
         }
 
-        this.OnReorder = false;
-
-        return this.AvailableStock - original;
+        AvailableStock = available;
+        OnReorder = onReorder != 0;
+        return added;
     }
 }

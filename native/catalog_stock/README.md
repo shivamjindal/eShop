@@ -1,33 +1,23 @@
 # catalog_stock (Rust island)
 
-Skeleton crate for the eShop **.NET → Rust** Catalog stock-slice demo.
+Pure Catalog stock rules (`RemoveStock` / `AddStock`) for the eShop **.NET → Rust** demo.
 
 | Path | Role |
 |------|------|
-| `native/catalog_stock/` | Pure stock rules (`RemoveStock` / `AddStock` semantics) |
+| `native/catalog_stock/` | Stock mutation semantics + `extern "C"` FFI |
 | `crate-type` | `cdylib` + `rlib` — P/Invoke from .NET, `cargo test` for parity |
+| .NET wire | `CatalogStockNative` → `CatalogItem.RemoveStock` / `AddStock` |
 
-## What agents should do
-
-Follow **Migrate slice to Rust** (`.cursor/skills/migrate-slice-to-rust/`):
-
-1. Characterize current .NET behavior and keep those tests green.
-2. Extract pure rules in .NET if still embedded.
-3. **Port the same rules into this crate** (replace the skeleton).
-4. **Wire Catalog.API / CatalogStock** to call this library (preferred: `LibraryImport` to the release `cdylib`).
-5. Prove parity; run `./scripts/check-catalog.sh` (builds/tests this crate when present).
-
-Strict mode (skills / CI that require the island):
+## Checks
 
 ```bash
+# Prefer CLT on macOS if Xcode license blocks linking:
+export DEVELOPER_DIR=/Library/Developer/CommandLineTools
+
+cargo test --manifest-path native/catalog_stock/Cargo.toml
+cargo build --release --manifest-path native/catalog_stock/Cargo.toml
+./scripts/check-catalog.sh
 MIGRATION_REQUIRE_RUST=1 ./scripts/check-catalog.sh
 ```
 
-## Local checks
-
-```bash
-cargo test --manifest-path native/catalog_stock/Cargo.toml
-cargo build --release --manifest-path native/catalog_stock/Cargo.toml
-```
-
-Do not leave this crate as unused dead code once the slice is claimed done.
+`Catalog.API` / `Catalog.UnitTests` import `CatalogStock.Native.targets` to build the release cdylib and copy it beside the managed output.
