@@ -7,7 +7,7 @@ description: Use when implementing the first .NET→Rust-friendly migration slic
 
 Implement the first **.NET → Rust-friendly** migration slice for a service: characterize current behavior with tests, extract pure domain rules, migrate callers then delete legacy in the same change, and green the check-catalog lever.
 
-Stacks pstack **tdd** + **migrate-callers-then-delete-legacy** + **build-the-lever**.
+Approach: write tests that lock current behavior first; extract the pure rules; update all callers and delete the old duplicated logic in the same change; use `scripts/check-catalog.sh` as the shared check.
 
 ## Default demo target
 
