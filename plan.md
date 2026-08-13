@@ -5,6 +5,9 @@ Ticket: SHIV-21 (`Basket.API → Rust`, epic SHIV-19). Service: `src/Basket.API`
 Direction is fixed: .NET → Rust. End state for this service is Rust on the live path; the
 .NET project is deleted once parity is proven.
 
+**Status:** units 1–6 below are done — `native/crates/basket` serves `basket-api`,
+`src/Basket.API` is deleted, and the evidence is in `validate.md`.
+
 ## Definition of done
 
 - [x] Whole-service inventory (public surface, domain, adapters, events, deps) complete
