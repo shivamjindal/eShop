@@ -47,6 +47,25 @@ internal static class Extensions
     }
 
     /// <summary>
+    /// Adds a service implemented by a crate in the native/ Rust workspace. Cargo builds
+    /// on first run, so the resource may take a moment to come up on a cold cache.
+    /// The resulting <see cref="ExecutableResource"/> is not an
+    /// <c>IResourceWithServiceDiscovery</c>: consumers must reference
+    /// <c>GetEndpoint("http")</c> rather than the resource itself.
+    /// </summary>
+    public static IResourceBuilder<ExecutableResource> AddRustService(
+        this IDistributedApplicationBuilder builder,
+        string name,
+        string binary)
+    {
+        var nativeDirectory = Path.Combine(builder.AppHostDirectory, "..", "..", "native");
+
+        return builder
+            .AddExecutable(name, "cargo", nativeDirectory, "run", "--release", "--quiet", "--bin", binary)
+            .WithHttpEndpoint(env: "PORT");
+    }
+
+    /// <summary>
     /// Configures eShop projects to use OpenAI for text embedding and chat.
     /// </summary>
     public static IDistributedApplicationBuilder AddOpenAI(this IDistributedApplicationBuilder builder,
