@@ -49,7 +49,7 @@ enum Command {
     Replay {
         #[command(flatten)]
         target: Target,
-        #[arg(long, name = "in")]
+        #[arg(long = "in")]
         transcript: PathBuf,
     },
 }
